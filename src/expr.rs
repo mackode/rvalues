@@ -779,3 +779,86 @@ impl Expr {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lexer() {
+        let mut lex = Lexer::new("12.34 + $foo * 'bar'");
+        assert_eq!(lex.next_token().unwrap(), Some(Token::Num(12.34)));
+        assert_eq!(lex.next_token().unwrap(), Some(Token::Op("+".to_string())));
+        assert_eq!(lex.next_token().unwrap(), Some(Token::Var("foo".to_string())));
+        assert_eq!(lex.next_token().unwrap(), Some(Token::Op("*".to_string())));
+        assert_eq!(lex.next_token().unwrap(), Some(Token::Str("bar".to_string())));
+        assert_eq!(lex.next_token().unwrap(), None);
+    }
+
+    #[test]
+    fn test_parser_basic() {
+        let parsed = parse("1 + 2 * 3").unwrap();
+        assert_eq!(parsed.len(), 1);
+        
+        let record = vec![];
+        let vars = HashMap::new();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "7");
+    }
+
+    #[test]
+    fn test_eval_variables() {
+        let parsed = parse("$1 . $2").unwrap();
+        let record = vec!["hello".to_string(), "world".to_string()];
+        let vars = HashMap::new();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "helloworld");
+    }
+
+    #[test]
+    fn test_eval_logical() {
+        let record = vec![];
+        let vars = HashMap::new();
+
+        let parsed = parse("1 && 0").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "0");
+
+        let parsed = parse("1 || 0").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "1");
+    }
+
+    #[test]
+    fn test_eval_functions() {
+        let record = vec!["2023-11-20".to_string(), "  hello  ".to_string()];
+        let vars = HashMap::new();
+
+        let parsed = parse("year($1)").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "2023");
+
+        let parsed = parse("trim($2)").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "hello");
+
+        let parsed = parse("upper(trim($2))").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "HELLO");
+
+        let parsed = parse("substr('abcdef', 2, 3)").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "bcd");
+
+        let parsed = parse("if(1 == 1, 'yes', 'no')").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "yes");
+
+        let parsed = parse("match('hello', 'e.l')").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "1");
+
+        let parsed = parse("max(10.5, 2.3)").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "10.5");
+
+        let parsed = parse("min('abc', 'def')").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "abc");
+
+        let parsed = parse("pick(2, 'apple,orange,banana')").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "orange");
+
+        let parsed = parse("round(3.14159, 2)").unwrap();
+        assert_eq!(parsed[0].eval(&record, &vars, None).unwrap(), "3.14");
+    }
+}
+

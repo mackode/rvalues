@@ -380,3 +380,49 @@ impl IOManager {
         Ok(fields)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_csv_line() {
+        let iom = IOManager::new(
+            vec![],
+            None,
+            false,
+            false,
+            ',',
+            None,
+            false,
+            true,
+            None,
+            None,
+        ).unwrap();
+
+        assert_eq!(iom.parse_csv_line("a,b,c").unwrap(), vec!["a", "b", "c"]);
+        assert_eq!(iom.parse_csv_line("\"a,b\",c").unwrap(), vec!["a,b", "c"]);
+        assert_eq!(iom.parse_csv_line("\"a\"\"b\",c").unwrap(), vec!["a\"b", "c"]);
+        assert_eq!(iom.parse_csv_line("a,b,").unwrap(), vec!["a", "b", ""]);
+    }
+
+    #[test]
+    fn test_parse_csv_line_custom_sep() {
+        let iom = IOManager::new(
+            vec![],
+            None,
+            false,
+            false,
+            ';',
+            None,
+            false,
+            true,
+            None,
+            None,
+        ).unwrap();
+
+        assert_eq!(iom.parse_csv_line("a;b;c").unwrap(), vec!["a", "b", "c"]);
+        assert_eq!(iom.parse_csv_line("\"a;b\";c").unwrap(), vec!["a;b", "c"]);
+    }
+}
+
